@@ -759,6 +759,7 @@ ol.tl{list-style:none;margin:12px 0 0;padding:0}
 .tl .body{padding-bottom:12px;min-width:0}
 .tl .body strong{font-size:15px}
 .tl .body .sub{font-size:13px;color:var(--muted)}
+.fare{font-size:13px;color:var(--muted);background:var(--soft);border-radius:8px;padding:8px 10px;margin:4px 0 12px;line-height:1.6}
 .hint{display:inline-flex;gap:6px;align-items:center;margin-top:4px;font-size:13px;background:var(--soft);padding:3px 8px;border-radius:6px}
 .tag{white-space:nowrap;flex:none;font-size:11px;font-weight:700;color:var(--warn);border:1px solid currentColor;border-radius:3px;padding:0 4px}
 .log{display:flex;flex-direction:column;gap:10px}
@@ -783,7 +784,11 @@ footer.note ul{margin:0;padding-left:18px}
 .stn{fill:var(--surface);fill-opacity:1;cursor:pointer}
 .stn.xfer{stroke:var(--ink)}
 .rcase{stroke:var(--surface)}
-.exitm{fill:var(--surface);fill-opacity:1}
+/* 出口徽章：外層大小為 0，內層用 translate 置中，避免和 Leaflet 定位用的 transform 衝突 */
+.exb{width:0;height:0}
+.exb span{position:absolute;transform:translate(-50%,-50%);display:block;width:8px;height:8px;border-radius:50%;background:var(--surface);border:1.5px solid #5a6774;font-size:0;line-height:1;color:var(--ink);font-family:var(--f-num);font-weight:700;white-space:nowrap;cursor:pointer}
+.exb span.el{border-color:var(--accent)}
+#map.exnum .exb span{width:auto;height:auto;min-width:18px;padding:2px 4px;border-radius:4px;font-size:11px;text-align:center}
 .leaflet-tooltip.exittip{font-size:12px;background:var(--surface);color:var(--ink);border-color:var(--rule)}
 .exon{stroke:var(--surface);fill:var(--ink);fill-opacity:1}
 .leaflet-tooltip.extip{background:var(--surface);color:var(--ink);border-color:var(--rule);font-size:12px;font-weight:700;padding:1px 6px;box-shadow:none}
@@ -984,7 +989,17 @@ const I18N={"zh-Hant":{
   enterVia:"從{exit}進站，走到{line}月台・約 {min} 分",
   leaveVia:"下車走到{exit}・約 {min} 分",
   arriveAt:"抵達{exit}",
-  exitEst:"出口步行時間依出口位置估計"
+  exitEst:"出口步行時間依出口位置估計",
+  exFromHere:"從這個出口出發",
+  exToHere:"到這個出口",
+  fareCard:"票價 {n} 元",
+  fareCardEst:"票價約 {n} 元",
+  fareSum:"票價",
+  fareUnit:"元",
+  fareApprox:"約 ",
+  fareNote:"成人單程票 {adult} 元・優待票 {conc} 元（兒童、敬老、愛心等，資格依各市規定）・資料來源：TDX",
+  fareMixed:"這條路線途經環狀線，以台北捷運票價表估算，跨系統實際扣款可能不同，請以官方公告為準。",
+  fareNone:"跨台北捷運與環狀線的票價 TDX 沒有提供，暫時無法試算。"
 }};
 let LANG="zh-Hant";
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]);
@@ -1001,6 +1016,20 @@ function stationWalk(name,line,ex){
   return Math.max(1,base+(exDist(name,ex)-avg)*1.3/75);
 }
 const exitLabel=ex=>ex.name+(ex.elevator?t("elevator"):"");
+
+// ---------- 票價（TDX 起訖站票價表） ----------
+function fareLookup(op,a,b){
+  const f=MD&&MD.fares&&MD.fares[op]; if(!f) return null;
+  const i=f.st.indexOf(a),j=f.st.indexOf(b); if(i<0||j<0||!f.adult[i][j]) return null;
+  return {adult:f.adult[i][j],conc:f.conc[i][j]};
+}
+// 只搭台北捷運：查 TRTC 表；只搭環狀線：查 NTMC 表；兩者都搭：起訖站都在 TRTC 表時用它估算（est），否則無資料
+function fareFor(r){
+  const ys=r.legs.map(l=>l.svc.line==="Y"), allY=ys.every(Boolean), anyY=ys.some(Boolean);
+  if(allY) return fareLookup("NTMC",r.from,r.to);
+  const f=fareLookup("TRTC",r.from,r.to);
+  return f?{...f,est:anyY}:(anyY?{none:true}:null);
+}
 function xferWalk(name,a,b,period){
   let w; if(a===b) w=0.5; else {const k=[a,b].sort().join("|");w=XFER[name+"|"+k]??3;}
   if(period==="peak"&&w>=3) w*=1.25; if(period==="night") w*=0.9; return w;
@@ -1158,9 +1187,18 @@ SERVICES.forEach(s=>L.polyline(pathFor(s,0,s.st.length-1),{className:"ln",color:
 // 出入口：放大到街區等級才顯示
 const exitLayer=L.layerGroup();
 if(MD&&MD.exits) for(const n in MD.exits) if(byStation[n]) MD.exits[n].forEach(x=>{
-  L.circleMarker([x.lat,x.lng],{radius:3.5,weight:1.5,color:"#5a6774",className:"exitm",interactive:true}).bindTooltip(`${n} ${x.name}${x.elevator?"（電梯）":""}`,{direction:"top",className:"exittip"}).addTo(exitLayer);
+  // 出口編號徽章：「出口1」只顯示「1」，「M1」維持原樣；有電梯的外框用強調色
+  const code=x.name.replace(/^出口(?=.)/,"");
+  L.marker([x.lat,x.lng],{icon:L.divIcon({className:"exb",html:`<span class="${x.elevator?"el":""}">${esc(code)}</span>`,iconSize:null}),keyboard:false})
+    .bindTooltip(`${esc(n)} ${esc(exitLabel(x))}${x.desc?`<br><small>${esc(x.desc)}</small>`:""}`,{direction:"top",offset:[0,-8],className:"exittip"})
+    .bindPopup(()=>`<div class="pp"><h4>${esc(n)} ${esc(exitLabel(x))}</h4>${x.desc?`<div class="fls">${esc(x.desc)}</div>`:""}<div class="acts">`+
+      `<button type="button" data-set="from" data-n="${esc(n)}" data-exit="${esc(x.id)}" style="background:#1d8a4e">${t("exFromHere")}</button>`+
+      `<button type="button" data-set="to" data-n="${esc(n)}" data-exit="${esc(x.id)}" style="background:#c0392b">${t("exToHere")}</button></div></div>`,{offset:[0,-4]})
+    .addTo(exitLayer);
 });
-map.on("zoomend",()=>{if(map.getZoom()>=15){if(!map.hasLayer(exitLayer))exitLayer.addTo(map);}else map.removeLayer(exitLayer);});
+// zoom 15 只顯示小點，16 以上顯示編號
+function syncExitLayer(){const z=map.getZoom();if(z>=15){if(!map.hasLayer(exitLayer))exitLayer.addTo(map);}else map.removeLayer(exitLayer);mapEl.classList.toggle("exnum",z>=16);}
+map.on("zoomend",syncExitLayer);
 LINKED.forEach(L0=>L.polyline([COORD[L0[0]],COORD[L0[2]]],{className:"walkln",weight:3,interactive:false}).addTo(netLayer));
 const markers={};
 NAMES.forEach(n=>{
@@ -1174,7 +1212,9 @@ NAMES.forEach(n=>{
 });
 mapEl.addEventListener("click",e=>{
   const b=e.target.closest("button[data-set]"); if(!b) return;
-  $(b.dataset.set).value=b.dataset.n; map.closePopup(); run(true);
+  const w=b.dataset.set; $(w).value=b.dataset.n;
+  if(b.dataset.exit!=null){syncExit(w);$(w+"Exit").value=b.dataset.exit;} // 從出口彈出視窗設定：連出口一起選
+  map.closePopup(); run(true);
 });
 $("srcmsg").textContent=MD?`資料：TDX（${new Date(MD.generatedAt).toLocaleDateString("zh-TW")} 更新）`:"資料：估計值";
 if(MD) document.querySelectorAll("[data-tdx]").forEach(e=>{e.textContent=e.dataset.tdx;});
@@ -1309,6 +1349,7 @@ function renderCards(){
       <span class="big">${r.low}–${r.high}<small>分</small></span>
       <div class="bar" aria-hidden="true"><span style="width:${r.walk/tot*100}%;background:${C_WALK}"></span><span style="width:${r.wait/tot*100}%;background:${C_WAIT}"></span><span style="width:${r.ride/tot*100}%;background:var(--accent)"></span></div>
       <span class="meta">轉乘 ${r.xfers} 次・走路 ${fmt(r.walk)} 分</span>
+      ${(fa=>fa&&!fa.none?`<span class="meta">${t(fa.est?"fareCardEst":"fareCard",{n:fa.adult})}</span>`:"")(fareFor(r))}
       <span class="chips">${lines.map(chip).join("")}</span>
       ${dup?`<span class="same">與「${dup.mode.name}」相同</span>`:""}`;
     b.addEventListener("click",()=>{sel=i;renderCards();renderDetail();drawRoute(routes[sel].r,true);});
@@ -1320,6 +1361,7 @@ function renderCards(){
 function renderDetail(){
   const x=routes[sel],r=x&&x.r,el=$("detail");
   el.hidden=!r; if(!r){el.innerHTML="";return;}
+  const fa=r&&fareFor(r);
   let tm=0; const items=[];
   const add=(html,dur,cls,c)=>{items.push(`<li><span class="t">${fmt(tm)}′</span><span class="rail ${cls||""}" style="--c:${c||"var(--rule)"}"><span class="dot"></span></span><div class="body">${html}</div></li>`);tm+=dur;};
   r.legs.forEach((l,k)=>{
@@ -1340,7 +1382,8 @@ function renderDetail(){
   items.push(`<li><span class="t">${fmt(tm)}′</span><span class="rail end" style="--c:var(--ink)"><span class="dot"></span></span><div class="body"><strong>${r.exTo?t("arriveAt",{exit:r.exTo.name}):"抵達出口"}</strong>${r.exFrom||r.exTo?`<div class="sub">${t("exitEst")}</div>`:""}</div></li>`);
   const pn={peak:"尖峰",off:"離峰",night:"深夜"}[period];
   el.innerHTML=`<h2>${x.mode.name}：${r.from} → ${r.to}</h2>
-    <div class="sum"><span>預估 <b>${r.low}–${r.high}</b> 分（平均 ${fmt(r.avg)}）</span><span>搭車 <b>${fmt(r.ride)}</b></span><span>等車 <b>${fmt(r.wait)}</b></span><span>走路 <b>${fmt(r.walk)}</b></span><span>${pn}時段</span></div>
+    <div class="sum"><span>預估 <b>${r.low}–${r.high}</b> 分（平均 ${fmt(r.avg)}）</span><span>搭車 <b>${fmt(r.ride)}</b></span><span>等車 <b>${fmt(r.wait)}</b></span><span>走路 <b>${fmt(r.walk)}</b></span>${fa&&!fa.none?`<span>${t("fareSum")} ${fa.est?t("fareApprox"):""}<b>${fa.adult}</b> ${t("fareUnit")}</span>`:""}<span>${pn}時段</span></div>
+    ${fa?`<div class="fare">${fa.none?t("fareNone"):t("fareNote",{adult:fa.adult,conc:fa.conc})+(fa.est?`<br>${t("fareMixed")}`:"")}</div>`:""}
     <ol class="tl">${items.join("")}</ol>${flHtml(r)}`;
 }
 function flHtml(r){

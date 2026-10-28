@@ -55,8 +55,10 @@
 - 底圖為無文字的深灰底圖，只有捷運站名，避免路名造成雜亂（使用者偏好）。
 - 查詢後路線加粗、其他路線變淡，起訖站有「起／迄」圖釘，自動縮放到路線範圍。
 - **每站都有站名**：轉乘站粗體深色、一般站細灰小字，字級隨縮放調整；有**自動避讓演算法**（8 個候選方向，避開其他站名與車站）。
-- 放大到 zoom 15 以上顯示出入口（有電梯會標註）。
+- 放大到 zoom 15 以上顯示出入口小點，16 以上顯示出口編號徽章（「出口1」顯示為「1」，「M1」維持原樣；有電梯者外框為強調色）。滑鼠移上去顯示站名、出口與 TDX 位置說明。由 `syncExitLayer()` 與 `#map.exnum` 控制。
 - **出入口選擇**：起訖站輸入框下方有出口選單（`#fromExit`／`#toExit`，選項含 TDX `LocationDescription` 與電梯標註；只有一個出口的站不顯示）。選定後時間軸寫「從 M8 進站…」，地圖標出出口並以虛線連到車站。
+- 地圖上的出口徽章可點：彈出視窗有「從這個出口出發／到這個出口」，會同時設定車站與出口（按鈕帶 `data-exit`）。
+- **票價試算**：卡片與路線摘要顯示成人單程票價，摘要下方列優待票價（兒童、敬老、愛心、愛心陪伴，TDX 各類同價、約成人 4 成）。`fareFor()` 規則：只搭台北捷運→查 TRTC 表；只搭環狀線→查 NTMC 表；兩者都搭且起訖站都在 TRTC 表→用 TRTC 表並標「約」與跨系統提醒；起訖站有一端只在環狀線→顯示「TDX 沒有提供，無法試算」。
 - 圖磚載入失敗時（例如 claude.ai artifact 的 CSP 限制）自動改用行政區底圖。
 
 ### 其他
@@ -89,7 +91,8 @@
 - 尖峰時轉乘步行 ≥3 分者 ×1.25；深夜 ×0.9。
 
 ### TDX 資料覆蓋（`window.METRO_DATA`）
-- `coords`、`seg`（`A>B` 分鐘，行駛＋停站）、`headway`（每線 peak/off/night）、`routes`（每個 RouteID 的 `{id, line, st, peak, off, night}`，停靠站由 S2STravelTime 推得，`null`＝該時段不開）、`xfer`、`firstLast`（每站 `{dest, first, last}`，凌晨時間 +1440）、`exits`、`shapes`。
+- `coords`、`seg`（`A>B` 分鐘，行駛＋停站）、`headway`（每線 peak/off/night）、`routes`（每個 RouteID 的 `{id, line, st, peak, off, night}`，停靠站由 S2STravelTime 推得，`null`＝該時段不開）、`xfer`、`firstLast`（每站 `{dest, first, last}`，凌晨時間 +1440）、`exits`（每站 `{id, name, en, desc, lat, lng, elevator}`）、`shapes`、`fares`。
+- `fares`：`{TRTC: {st, adult, conc}, NTMC: {…}}`，由 ODFare 轉成起訖站矩陣（`st` 站名陣列，`adult[i][j]` 成人單程票、`conc[i][j]` 優待票；TicketType 1＝單程票，FareClass 1 成人、3/4/5/7 優待且同價）。票價去回相同。TRTC 原始檔約 12 MB（14,884 筆），轉出後 metro-data.js 約 264 KB。
 - 首末班：`depAt()` 會找「往這個方向、且終點在目的站以後」的班次，首班取最早、末班取最晚；沒有資料才用「06:00／24:00 起點站發車＋行駛時間」推算。
   - TDX 支線班次的目的地會寫成本站（七張→七張），`fetch-tdx.mjs` 用 `BRANCH_END` 改成支線另一端。
 - 線型：TDX 的 `MULTILINESTRING` 是順序打亂的小段，`chainParts()`（fetch-tdx.mjs）依端點（40 公尺內）接成連續線，岔路選轉角最小的。
@@ -104,6 +107,7 @@
 1. **金鑰保密**：不要讀取、顯示 `.env`，不要把金鑰寫進其他檔案或提交 Git。前端網頁絕對不能放 Client Secret。
 2. **TDX 額度**：基礎會員每月約 3 點（約 3,000 次），不同資料類型扣點可能不同。完整抓一次約 16 次。`fetch-tdx.mjs` 預設每月上限 500 次。
    - 除錯請用 `node fetch-tdx.mjs --offline`（用 `tdx-raw/` 重新轉檔，不呼叫 API）。
+   - 只需要某類資料時用 `node fetch-tdx.mjs --only=ODFare`（可逗號分隔多類），只呼叫該類＋token。完整抓取現在是 9 類 × 2 營運者 = 18 次＋token。
    - TDX 有每秒次數限制，連續呼叫會回 429。`fetch-tdx.mjs` 每次間隔 1 秒，遇 429 依 `Retry-After` 等待後重試（最多 3 次），每抓完一類就存 `_meta.json`。重試也會計入 `tdx-usage.json`。
    - **每次要真正呼叫 TDX 前先告訴使用者。**
 3. **公司網路 TLS 攔截**：使用者在 CECI 內網，對外連線被 `CECI-ServiceChain-ECDSA`（由根憑證 `CECICA1` 簽發）重簽。已設定：
@@ -184,7 +188,7 @@
 - [ ] 加載 Noto Sans JP、Noto Sans KR，依語言切換字型堆疊，避免日文、韓文出現中文字形或缺字。
 
 **觀光客實用功能（可一併規劃）**
-- [ ] 票價顯示（TDX 有捷運票價資料 ODFare），標註悠遊卡與單程票。
+- [x] 票價顯示（ODFare，2026-10-28）。待補：悠遊卡常客優惠、TPASS、跨台北捷運與環狀線的實際計費規則（需查官方公告後再實作，不可猜）。
 - [ ] 加入**桃園機場捷運**（營運者代碼 TYMC），這是觀光客最常用的路線之一。
 - [ ] 景點搜尋：輸入台北 101、龍山寺、士林夜市、故宮等熱門景點，自動帶出最近的車站與出口。
 - [ ] 車廂位置、無障礙電梯等資訊在外文介面同樣顯示。

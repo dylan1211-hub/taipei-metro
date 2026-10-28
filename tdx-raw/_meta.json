@@ -78,5 +78,15 @@
     "lastModified": "Wed, 28 Oct 2026 04:52:49 GMT",
     "fetchedAt": "2026-10-28T08:06:00.541Z",
     "count": 2
+  },
+  "ODFare_TRTC": {
+    "lastModified": "Wed, 16 Sep 2026 10:13:06 GMT",
+    "fetchedAt": "2026-10-28T09:01:38.894Z",
+    "count": 14884
+  },
+  "ODFare_NTMC": {
+    "lastModified": "Wed, 28 Oct 2026 02:52:49 GMT",
+    "fetchedAt": "2026-10-28T09:01:40.072Z",
+    "count": 196
   }
 }

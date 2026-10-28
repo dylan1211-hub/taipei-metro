@@ -8,6 +8,7 @@
 //   2. node fetch-tdx.mjs           一般執行（資料沒變動就沿用舊檔）
 //      node fetch-tdx.mjs --force   不管有沒有變動都重抓
 //      node fetch-tdx.mjs --offline 不連線，只用 tdx-raw/ 裡已存的資料重新轉檔
+//      node fetch-tdx.mjs --only=ODFare  只抓指定的資料類型
 //
 // 需要 Node.js 18 以上（內建 fetch）。
 
@@ -26,7 +27,9 @@ const OFFLINE = process.argv.includes("--offline");
 const BASE = "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro";
 const TOKEN_URL = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token";
 const OPERATORS = ["TRTC", "NTMC"]; // 台北捷運、新北捷運（環狀線）
-const TYPES = ["Station", "StationOfLine", "S2STravelTime", "Frequency", "FirstLastTimetable", "LineTransfer", "StationExit", "Shape"];
+const TYPES = ["Station", "StationOfLine", "S2STravelTime", "Frequency", "FirstLastTimetable", "LineTransfer", "StationExit", "Shape", "ODFare"];
+// --only=ODFare,Shape：只抓指定的資料類型（省額度）
+const ONLY = (process.argv.find(a => a.startsWith("--only=")) || "").slice(7).split(",").filter(Boolean);
 
 // ---------- 小工具 ----------
 async function loadEnv() {
@@ -83,7 +86,7 @@ async function fetchAll() {
   const meta = await readJSON(path.join(RAW, "_meta.json"), {});
   const token = await getToken();
   let changed = 0;
-  for (const op of OPERATORS) for (const type of TYPES) {
+  for (const op of OPERATORS) for (const type of (ONLY.length ? ONLY : TYPES)) {
     const key = `${type}_${op}`, file = path.join(RAW, key + ".json");
     const url = `${BASE}/${type}/${op}?%24format=JSON`;
     const headers = { authorization: `Bearer ${token}`, "accept-encoding": "br,gzip" };
@@ -268,13 +271,32 @@ async function transform() {
   }
   for (const L in shapes) shapes[L] = chainParts(shapes[L]);
 
+  // 票價：每個營運者一張起訖站矩陣，adult＝成人單程票，conc＝優待票（台北/新北市籍兒童、敬老、愛心、愛心陪伴，TDX 各類同價）
+  const fares = {};
+  for (const op of OPERATORS) {
+    const rows = await readJSON(path.join(RAW, `ODFare_${op}.json`), []);
+    if (!rows.length) continue;
+    const st = [], idx = {};
+    const at = id => { const n = idName[id]; if (!n) return -1; if (!(n in idx)) { idx[n] = st.length; st.push(n); } return idx[n]; };
+    for (const x of rows) { at(x.OriginStationID); at(x.DestinationStationID); }
+    const adult = st.map(() => st.map(() => 0)), conc = st.map(() => st.map(() => 0));
+    for (const x of rows) {
+      const i = at(x.OriginStationID), j = at(x.DestinationStationID); if (i < 0 || j < 0) continue;
+      const price = c => (x.Fares || []).find(f => f.FareClass === c && f.TicketType === 1)?.Price;
+      if (price(1) != null) adult[i][j] = price(1);
+      const c = price(4) ?? price(5) ?? price(3); if (c != null) conc[i][j] = c;
+    }
+    fares[op] = { st, adult, conc };
+  }
+  if (!Object.keys(fares).length) notes.push("沒有票價資料（tdx-raw/ODFare_*.json），網頁不會顯示票價");
+
   const meta = await readJSON(path.join(RAW, "_meta.json"), {});
   const data = {
     source: "TDX 運輸資料流通服務平臺",
     generatedAt: new Date().toISOString(),
-    counts: { stations: Object.keys(coords).length, segments: Object.keys(seg).length, headwayLines: Object.keys(headway).length, headwayRoutes: routes.length, transfers: Object.keys(xfer).length, firstLastStations: Object.keys(firstLast).length, exitStations: Object.keys(exits).length, shapeLines: Object.keys(shapes).length },
+    counts: { stations: Object.keys(coords).length, segments: Object.keys(seg).length, headwayLines: Object.keys(headway).length, headwayRoutes: routes.length, transfers: Object.keys(xfer).length, firstLastStations: Object.keys(firstLast).length, exitStations: Object.keys(exits).length, shapeLines: Object.keys(shapes).length, fareTables: Object.keys(fares).length },
     fetched: Object.fromEntries(Object.entries(meta).map(([k, v]) => [k, v.fetchedAt])),
-    coords, seg, headway, routes, xfer, firstLast, exits, shapes
+    coords, seg, headway, routes, xfer, firstLast, exits, shapes, fares
   };
   await fs.writeFile(OUT, "// 由 fetch-tdx.mjs 自動產生，請勿手動修改\nwindow.METRO_DATA=" + JSON.stringify(data) + ";\n");
   console.log("\n已產生 metro-data.js：");
