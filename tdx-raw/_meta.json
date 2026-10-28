@@ -1,0 +1,82 @@
+{
+  "Station_TRTC": {
+    "lastModified": "Fri, 02 Oct 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:03:00.307Z",
+    "count": 122
+  },
+  "StationOfLine_TRTC": {
+    "lastModified": "Tue, 08 Sep 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:03:01.595Z",
+    "count": 5
+  },
+  "S2STravelTime_TRTC": {
+    "lastModified": "Wed, 20 May 2020 04:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:03:02.734Z",
+    "count": 11
+  },
+  "Frequency_TRTC": {
+    "lastModified": "Wed, 16 Sep 2026 10:12:57 GMT",
+    "fetchedAt": "2026-10-28T08:03:03.918Z",
+    "count": 22
+  },
+  "FirstLastTimetable_TRTC": {
+    "lastModified": "Wed, 16 Sep 2026 10:13:33 GMT",
+    "fetchedAt": "2026-10-28T08:03:04.977Z",
+    "count": 245
+  },
+  "LineTransfer_TRTC": {
+    "lastModified": "Wed, 20 May 2020 04:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:04:01.270Z",
+    "count": 35
+  },
+  "StationExit_TRTC": {
+    "lastModified": "Fri, 02 Oct 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:04:02.491Z",
+    "count": 439
+  },
+  "Shape_TRTC": {
+    "lastModified": "Wed, 28 Oct 2026 07:52:50 GMT",
+    "fetchedAt": "2026-10-28T08:04:03.654Z",
+    "count": 5
+  },
+  "Station_NTMC": {
+    "lastModified": "Mon, 14 Sep 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:04:04.815Z",
+    "count": 26
+  },
+  "StationOfLine_NTMC": {
+    "lastModified": "Mon, 14 Sep 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:04:06.048Z",
+    "count": 2
+  },
+  "S2STravelTime_NTMC": {
+    "lastModified": "Mon, 14 Sep 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:05:00.511Z",
+    "count": 2
+  },
+  "Frequency_NTMC": {
+    "lastModified": "Mon, 14 Sep 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:05:01.788Z",
+    "count": 4
+  },
+  "FirstLastTimetable_NTMC": {
+    "lastModified": "Mon, 14 Sep 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:05:02.964Z",
+    "count": 70
+  },
+  "LineTransfer_NTMC": {
+    "lastModified": "Mon, 14 Sep 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:05:04.068Z",
+    "count": 6
+  },
+  "StationExit_NTMC": {
+    "lastModified": "Mon, 14 Sep 2026 09:00:00 GMT",
+    "fetchedAt": "2026-10-28T08:05:05.263Z",
+    "count": 47
+  },
+  "Shape_NTMC": {
+    "lastModified": "Wed, 28 Oct 2026 04:52:49 GMT",
+    "fetchedAt": "2026-10-28T08:06:00.541Z",
+    "count": 2
+  }
+}
