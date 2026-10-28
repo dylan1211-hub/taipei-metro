@@ -9,7 +9,7 @@
 - `fetch-tdx.mjs`：從 TDX 抓資料並產生 `metro-data.js`（需要 Node.js 18 以上）。
 - `tdx-raw/`：TDX 原始資料。
 - `.env.example`：金鑰設定範例，複製成 `.env` 後填入。
-- `.github/workflows/update-tdx.yml`：每週一 03:17（台北時間）自動更新資料。
+- `.github/workflows/update-tdx.yml`：每月 2 日 03:17（台北時間）自動更新資料。
 - `CLAUDE.md`：開發交接說明。
 
 ## 第一次執行

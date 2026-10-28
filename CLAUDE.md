@@ -27,7 +27,7 @@
 | `tdx-raw/` | TDX 原始 JSON 與 `_meta.json`（Last-Modified 紀錄） |
 | `tdx-usage.json` | 當月 API 呼叫次數 |
 | `.env` | TDX 金鑰（`TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`、`TDX_MONTHLY_BUDGET`），已列在 `.gitignore` |
-| `.github/workflows/update-tdx.yml` | 每週一 03:17（台北）自動更新資料並提交 |
+| `.github/workflows/update-tdx.yml` | 每月 2 日 03:17（台北）自動更新資料並提交（使用者偏好每月一次即可） |
 
 外部依賴：Leaflet 1.9.4（cdnjs 載入，CSS 已內嵌）、Google Fonts（Noto Sans TC、IBM Plex Mono）、Esri「World Dark Gray Base」深灰底圖（無文字、免金鑰；OSM 標準圖磚路名太雜、CARTO 深色圖磚現在需要金鑰，所以不用）。行政區底圖資料內嵌在 `index.html`（來源 npm `taiwan-atlas`，內政部行政區界）。
 
@@ -133,8 +133,9 @@
 - [x] 分頁截斷：16 類資料沒有剛好 30 或 1000 筆的。
 
 ### B. 部署
-- [ ] 建立 Git repo、推到 GitHub、設定 GitHub Pages（或 Vercel）。
-- [ ] 在 GitHub Secrets 設定 `TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`，確認 Actions 能每週更新。
+- [x] 建立 Git repo、推到 GitHub（dylan1211-hub/taipei-metro，公開）、設定 GitHub Pages：https://dylan1211-hub.github.io/taipei-metro/
+- [ ] 已在 GitHub Secrets 設定 `TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`；尚未實際跑過一次 Actions 確認每月更新成功。
+- 推送注意：這台電腦的 Git 預設登入帳號是 Dylan-GE，本 repo 的 remote 網址已指定 `dylan1211-hub@github.com`。Actions 會自動提交資料，本機修改前先 `git pull`。
 
 ### C. 捷運功能強化
 - [ ] **出入口選擇**：讓使用者選起訖站的出口，用出口位置調整進出站步行時間。
