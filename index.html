@@ -703,13 +703,14 @@ header p{margin:0;color:color-mix(in srgb,var(--band-ink) 72%,transparent);font-
 .mapnote .k i{width:10px;height:10px;border-radius:50%;display:inline-block;border:2px solid var(--ink);background:var(--surface)}
 .mapnote button{font:inherit;font-size:12px;padding:2px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer}
 .panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px}
-.q{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end}
+.q{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start}
 .q label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);letter-spacing:.06em;min-width:0}
 .q label .pin{display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;margin-right:4px;vertical-align:-3px}
 .pin.a{background:#1d8a4e}.pin.b{background:#c0392b}
 .q input{font:inherit;font-size:17px;font-weight:700;padding:9px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--ink);width:100%;min-width:0}
-.q input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.swap{height:44px;width:44px;border-radius:50%;border:1px solid var(--rule);background:var(--surface);color:var(--ink);font-size:18px;cursor:pointer}
+.q .exsel{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--ink);width:100%;min-width:0;text-overflow:ellipsis}
+.q select:focus-visible,.q input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.swap{height:44px;width:44px;border-radius:50%;border:1px solid var(--rule);background:var(--surface);color:var(--ink);font-size:18px;cursor:pointer;margin-top:23px}
 .row2{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
 .seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
 .seg button{font:inherit;font-size:14px;padding:6px 13px;border:0;background:transparent;color:var(--muted);cursor:pointer}
@@ -784,6 +785,9 @@ footer.note ul{margin:0;padding-left:18px}
 .rcase{stroke:var(--surface)}
 .exitm{fill:var(--surface);fill-opacity:1}
 .leaflet-tooltip.exittip{font-size:12px;background:var(--surface);color:var(--ink);border-color:var(--rule)}
+.exon{stroke:var(--surface);fill:var(--ink);fill-opacity:1}
+.leaflet-tooltip.extip{background:var(--surface);color:var(--ink);border-color:var(--rule);font-size:12px;font-weight:700;padding:1px 6px;box-shadow:none}
+.leaflet-tooltip.extip::before{display:none}
 .walkln{stroke:var(--ink);stroke-dasharray:2 6;stroke-linecap:round}
 .leaflet-tooltip.lbl{background:transparent;border:0;box-shadow:none;padding:0 2px;font-size:12px;font-weight:700;color:var(--ink);text-shadow:0 0 3px var(--surface),0 0 3px var(--surface),0 0 2px var(--surface)}
 .leaflet-tooltip.lbl::before{display:none}
@@ -816,7 +820,7 @@ footer.note ul{margin:0;padding-left:18px}
 @media (max-width:560px){
   .cards{grid-template-columns:1fr}
   .q{grid-template-columns:1fr auto;grid-template-areas:"a s" "b s"}
-  .q label:first-child{grid-area:a}.q label:last-child{grid-area:b}.swap{grid-area:s;align-self:center}
+  .q label:first-child{grid-area:a}.q label:last-child{grid-area:b}.swap{grid-area:s;align-self:center;margin-top:0}
 }
 @media (prefers-reduced-motion:reduce){.ln{transition:none}}
 </style>
@@ -847,9 +851,9 @@ footer.note ul{margin:0;padding-left:18px}
     <section class="panel" aria-label="查詢">
       <form id="qf" autocomplete="off">
         <div class="q">
-          <label><span><span class="pin a">起</span>起站</span><input id="from" list="stations" value="新店" required></label>
+          <label><span><span class="pin a">起</span>起站</span><input id="from" list="stations" value="新店" required><select id="fromExit" class="exsel" hidden></select></label>
           <button type="button" class="swap" id="swap" aria-label="交換起訖站">⇅</button>
-          <label><span><span class="pin b">迄</span>迄站</span><input id="to" list="stations" value="板橋" required></label>
+          <label><span><span class="pin b">迄</span>迄站</span><input id="to" list="stations" value="板橋" required><select id="toExit" class="exsel" hidden></select></label>
         </div>
         <datalist id="stations"></datalist>
         <div class="row2">
@@ -970,6 +974,33 @@ const linesAt=n=>[...new Set(byStation[n].map(o=>o.svc.line))];
 const isXfer=n=>linesAt(n).length>1||LINKED.some(L=>L[0]===n||L[2]===n);
 
 function entryWalk(name,line){return ENTRY[name+"|"+line]??ENTRY_DEF[line]??1.5;}
+
+// ---------- 介面文字（多語系預備：新增的文字一律經過 t()） ----------
+const I18N={"zh-Hant":{
+  exitAny:"不指定出口",
+  exitAria:"{station}的出口",
+  exitOpt:"{name}・{desc}",
+  elevator:"（有電梯）",
+  enterVia:"從{exit}進站，走到{line}月台・約 {min} 分",
+  leaveVia:"下車走到{exit}・約 {min} 分",
+  arriveAt:"抵達{exit}",
+  exitEst:"出口步行時間依出口位置估計"
+}};
+let LANG="zh-Hant";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]);
+function t(key,p){const s=(I18N[LANG]&&I18N[LANG][key])??I18N["zh-Hant"][key]??key;return p?s.replace(/\{(\w+)\}/g,(m,k)=>p[k]??m):s;}
+
+// ---------- 出入口 ----------
+// 依出口離車站中心的遠近調整進出站步行：比該站出口平均距離遠就加時間、近就減（步行 75 公尺/分，繞行係數 1.3）
+const EXSEL={from:null,to:null};
+const exitsOf=n=>(MD&&MD.exits&&MD.exits[n])||[];
+const exDist=(n,x)=>{const c=COORD[n];return Math.hypot((x.lat-c[0])*111000,(x.lng-c[1])*101000);};
+function stationWalk(name,line,ex){
+  const base=entryWalk(name,line); if(!ex) return base;
+  const list=exitsOf(name), avg=list.reduce((s,x)=>s+exDist(name,x),0)/list.length;
+  return Math.max(1,base+(exDist(name,ex)-avg)*1.3/75);
+}
+const exitLabel=ex=>ex.name+(ex.elevator?t("elevator"):"");
 function xferWalk(name,a,b,period){
   let w; if(a===b) w=0.5; else {const k=[a,b].sort().join("|");w=XFER[name+"|"+k]??3;}
   if(period==="peak"&&w>=3) w*=1.25; if(period==="night") w*=0.9; return w;
@@ -1003,7 +1034,7 @@ function search(from,to,mode,period){
     for(const o of opts){
       if(cur.svc&&o.svc.id===cur.svc.id) continue;
       let walk,xfer=0;
-      if(!cur.svc) walk=entryWalk(cur.name,o.svc.line);
+      if(!cur.svc) walk=stationWalk(cur.name,o.svc.line,EXSEL.from);
       else {xfer=1;walk=o.walkTo!=null?o.walkTo*(period==="peak"?1.15:1):xferWalk(cur.name,cur.svc.line,o.svc.line,period);}
       for(let j=0;j<o.svc.st.length;j++){
         if(j===o.idx) continue;
@@ -1014,13 +1045,13 @@ function search(from,to,mode,period){
     }
   }
   let best=null,bc=Infinity;
-  for(const o of byStation[to]){const k=to+"|"+o.svc.id;if(!dist.has(k))continue;const cost=dist.get(k)+weight(mode,{walk:entryWalk(to,o.svc.line),wait:0,ride:0,xfer:0});if(cost<bc){bc=cost;best=k;}}
+  for(const o of byStation[to]){const k=to+"|"+o.svc.id;if(!dist.has(k))continue;const cost=dist.get(k)+weight(mode,{walk:stationWalk(to,o.svc.line,EXSEL.to),wait:0,ride:0,xfer:0});if(cost<bc){bc=cost;best=k;}}
   if(!best) return null;
   const legs=[];let k=best;while(prev.has(k)){const p=prev.get(k);legs.unshift(p);k=p.from;}
-  const exitWalk=entryWalk(to,legs[legs.length-1].svc.line);
+  const exitWalk=stationWalk(to,legs[legs.length-1].svc.line,EXSEL.to);
   let walk=exitWalk,wait=0,ride=0;legs.forEach(l=>{walk+=l.c.walk;wait+=l.c.wait;ride+=l.c.ride;});
   return {legs,exitWalk,walk,wait,ride,avg:walk+wait+ride,low:Math.floor(ride+walk*0.85+wait*0.3),high:Math.ceil(ride+walk*1.2+wait*1.9),
-    xfers:legs.length-1,from,to,sig:legs.map(l=>l.svc.id+l.i+">"+l.j).join(",")};
+    xfers:legs.length-1,from,to,exFrom:EXSEL.from,exTo:EXSEL.to,sig:legs.map(l=>l.svc.id+l.i+">"+l.j).join(",")};
 }
 function hashN(s,n){let h=2166136261;for(const ch of s){h^=ch.codePointAt(0);h=Math.imul(h,16777619);}return (Math.abs(h)%n)+1;}
 function carHint(leg,p){return {car:hashN(leg.svc.id+leg.i+">"+leg.j+p,leg.svc.cars),n:leg.svc.cars};}
@@ -1205,6 +1236,13 @@ function drawRoute(r,fit){
     [l.boardName,l.svc.st[l.j]].forEach(n=>{lblOn.add(n);markers[n].getTooltip()?.getElement()?.classList.add("lbl-on");});
     if(k>0){const pn=r.legs[k-1].svc.st[r.legs[k-1].j]; if(pn!==l.boardName) L.polyline([COORD[pn],COORD[l.boardName]],{className:"walkln",weight:4,interactive:false}).addTo(routeLayer);}
   });
+  // 選定的出口：標出位置，用虛線連到車站
+  [[r.exFrom,r.from],[r.exTo,r.to]].forEach(([ex,n])=>{
+    if(!ex) return;
+    L.polyline([[ex.lat,ex.lng],COORD[n]],{className:"walkln",weight:3,interactive:false}).addTo(routeLayer);
+    L.circleMarker([ex.lat,ex.lng],{radius:5,weight:2,className:"exon",interactive:false}).bindTooltip(exitLabel(ex),{permanent:true,direction:"right",offset:[6,0],className:"extip"}).addTo(routeLayer);
+    all.push([ex.lat,ex.lng]);
+  });
   L.marker(COORD[r.from],{icon:pinIcon("起","#1d8a4e"),interactive:false,zIndexOffset:1000}).addTo(routeLayer);
   L.marker(COORD[r.to],{icon:pinIcon("迄","#c0392b"),interactive:false,zIndexOffset:1000}).addTo(routeLayer);
   if(fit) map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:14});
@@ -1224,15 +1262,32 @@ let period=defaultPeriod(), routes=[], sel=0;
 function setPeriod(p){period=p;document.querySelectorAll("#period button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===p));}
 setPeriod(period);
 $("period").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;setPeriod(b.dataset.p);run(false);});
-$("swap").addEventListener("click",()=>{const a=$("from").value;$("from").value=$("to").value;$("to").value=a;run(true);});
+// 起訖站的出口選單：站名改變時重建選項；只有一個出口的站不顯示
+function syncExit(which){
+  const n=$(which).value.trim(), sel=$(which+"Exit"), list=byStation[n]?exitsOf(n):[];
+  if(sel.dataset.st!==n){
+    sel.dataset.st=n; sel.replaceChildren(new Option(t("exitAny"),""));
+    list.forEach(x=>sel.add(new Option(x.desc?t("exitOpt",{name:exitLabel(x),desc:x.desc}):exitLabel(x),x.id)));
+    sel.setAttribute("aria-label",t("exitAria",{station:n}));
+  }
+  sel.hidden=list.length<2;
+  EXSEL[which]=list.find(x=>x.id===sel.value)||null;
+}
+function syncExits(){syncExit("from");syncExit("to");}
+["from","to"].forEach(w=>{
+  $(w).addEventListener("change",syncExits);
+  $(w+"Exit").addEventListener("change",()=>{syncExits();if(routes.length)run(false);});
+});
+$("swap").addEventListener("click",()=>{const a=$("from").value,ea=$("fromExit").value,eb=$("toExit").value;$("from").value=$("to").value;$("to").value=a;syncExits();$("fromExit").value=eb;$("toExit").value=ea;run(true);});
 $("qf").addEventListener("submit",e=>{e.preventDefault();run(true);});
-$("clear").addEventListener("click",()=>{$("from").value="";$("to").value="";$("err").hidden=true;$("info").hidden=true;routes=[];renderAll(false);map.closePopup();map.fitBounds(allBounds,{padding:[16,16]});$("from").focus();});
+$("clear").addEventListener("click",()=>{$("from").value="";$("to").value="";syncExits();$("err").hidden=true;$("info").hidden=true;routes=[];renderAll(false);map.closePopup();map.fitBounds(allBounds,{padding:[16,16]});$("from").focus();});
 
 const chip=line=>{const L0=LINE_INFO[line];return `<span class="chip" style="background:${L0.color};color:${L0.text}">${L0.name}</span>`;};
 const fmt=x=>Math.round(x);
 const C_WALK="var(--muted)",C_WAIT="var(--warn)";
 
 function run(fit){
+  syncExits();
   const f=$("from").value.trim(),t=$("to").value.trim(),err=$("err"),info=$("info"); err.hidden=true; info.hidden=true;
   if((byStation[f]&&!t)||(byStation[t]&&!f)){routes=[];renderAll(false);drawPins(byStation[f]?f:null,byStation[t]?t:null);
     info.textContent=f?"已選起站，再點地圖上的車站選迄站。":"已選迄站，再點地圖上的車站選起站。";info.hidden=false;return;}
@@ -1265,11 +1320,11 @@ function renderCards(){
 function renderDetail(){
   const x=routes[sel],r=x&&x.r,el=$("detail");
   el.hidden=!r; if(!r){el.innerHTML="";return;}
-  let t=0; const items=[];
-  const add=(html,dur,cls,c)=>{items.push(`<li><span class="t">${fmt(t)}′</span><span class="rail ${cls||""}" style="--c:${c||"var(--rule)"}"><span class="dot"></span></span><div class="body">${html}</div></li>`);t+=dur;};
+  let tm=0; const items=[];
+  const add=(html,dur,cls,c)=>{items.push(`<li><span class="t">${fmt(tm)}′</span><span class="rail ${cls||""}" style="--c:${c||"var(--rule)"}"><span class="dot"></span></span><div class="body">${html}</div></li>`);tm+=dur;};
   r.legs.forEach((l,k)=>{
     const Ln=LINE_INFO[l.svc.line];
-    if(k===0) add(`<strong>${r.from}</strong><div class="sub">進站走到${Ln.name}月台・約 ${fmt(l.c.walk)} 分</div>`,l.c.walk,"dash",Ln.color);
+    if(k===0) add(`<strong>${r.from}</strong><div class="sub">${r.exFrom?t("enterVia",{exit:exitLabel(r.exFrom),line:Ln.name,min:fmt(l.c.walk)})+(r.exFrom.desc?`<br>${esc(r.exFrom.desc)}`:""):`進站走到${Ln.name}月台・約 ${fmt(l.c.walk)} 分`}</div>`,l.c.walk,"dash",Ln.color);
     else{
       const pl=LINE_INFO[r.legs[k-1].svc.line], pn=r.legs[k-1].svc.st[r.legs[k-1].j];
       const where=l.boardName!==pn?`出站走到${l.boardName}站，`:"站內";
@@ -1281,8 +1336,8 @@ function renderDetail(){
     add(`<span class="chips">${chip(l.svc.line)}</span> <strong>${l.boardName} → ${l.svc.st[l.j]}</strong><div class="sub">${dirLabel(l.svc,l.i,l.j)}・${Math.abs(l.j-l.i)} 站・約 ${fmt(l.c.ride)} 分</div>`,l.c.ride,"",Ln.color);
   });
   const eh=carHint(r.legs[r.legs.length-1],"exit");
-  add(`<strong>${r.to}</strong><div class="sub">下車走到出口・約 ${fmt(r.exitWalk)} 分</div><div class="hint">🚃 搭第 ${eh.car} 節最靠近出站電扶梯 <span class="tag">示意</span></div>`,r.exitWalk,"dash","var(--muted)");
-  items.push(`<li><span class="t">${fmt(t)}′</span><span class="rail end" style="--c:var(--ink)"><span class="dot"></span></span><div class="body"><strong>抵達出口</strong></div></li>`);
+  add(`<strong>${r.to}</strong><div class="sub">${r.exTo?t("leaveVia",{exit:exitLabel(r.exTo),min:fmt(r.exitWalk)})+(r.exTo.desc?`<br>${esc(r.exTo.desc)}`:""):`下車走到出口・約 ${fmt(r.exitWalk)} 分`}</div><div class="hint">🚃 搭第 ${eh.car} 節最靠近出站電扶梯 <span class="tag">示意</span></div>`,r.exitWalk,"dash","var(--muted)");
+  items.push(`<li><span class="t">${fmt(tm)}′</span><span class="rail end" style="--c:var(--ink)"><span class="dot"></span></span><div class="body"><strong>${r.exTo?t("arriveAt",{exit:r.exTo.name}):"抵達出口"}</strong>${r.exFrom||r.exTo?`<div class="sub">${t("exitEst")}</div>`:""}</div></li>`);
   const pn={peak:"尖峰",off:"離峰",night:"深夜"}[period];
   el.innerHTML=`<h2>${x.mode.name}：${r.from} → ${r.to}</h2>
     <div class="sum"><span>預估 <b>${r.low}–${r.high}</b> 分（平均 ${fmt(r.avg)}）</span><span>搭車 <b>${fmt(r.ride)}</b></span><span>等車 <b>${fmt(r.wait)}</b></span><span>走路 <b>${fmt(r.walk)}</b></span><span>${pn}時段</span></div>

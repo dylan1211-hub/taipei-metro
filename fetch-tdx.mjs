@@ -251,7 +251,11 @@ async function transform() {
   for (const x of await raw("StationExit")) {
     const n = nameOf(x.StationID, x.StationName), p = x.ExitPosition || {};
     if (!n || !p.PositionLat) continue;
-    (exits[n] ||= []).push({ id: x.ExitID, name: zh(x.ExitName) || x.ExitID, lat: p.PositionLat, lng: p.PositionLon, elevator: !!x.Elevator });
+    const list = exits[n] ||= [];
+    if (list.some(e => e.id === x.ExitID)) continue; // 轉乘站各線會重複列同一個出口
+    // 出口名稱去掉站名，例如「台北車站M1」→「M1」、「頂埔站出口1」→「出口1」
+    const name = zh(x.ExitName).replace(n, "").replace(/^站/, "") || x.ExitID;
+    list.push({ id: x.ExitID, name, en: x.ExitName?.En || "", desc: norm(x.LocationDescription), lat: p.PositionLat, lng: p.PositionLon, elevator: !!x.Elevator });
   }
 
   // 路線線型（WKT → [[lat,lng],...]）
