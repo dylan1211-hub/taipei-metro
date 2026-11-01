@@ -35,8 +35,8 @@
     "count": 439
   },
   "Shape_TRTC": {
-    "lastModified": "Wed, 28 Oct 2026 07:52:50 GMT",
-    "fetchedAt": "2026-10-28T08:04:03.654Z",
+    "lastModified": "Sun, 01 Nov 2026 14:52:48 GMT",
+    "fetchedAt": "2026-11-01T22:55:02.760Z",
     "count": 5
   },
   "Station_NTMC": {
@@ -75,8 +75,8 @@
     "count": 47
   },
   "Shape_NTMC": {
-    "lastModified": "Wed, 28 Oct 2026 04:52:49 GMT",
-    "fetchedAt": "2026-10-28T08:06:00.541Z",
+    "lastModified": "Sun, 01 Nov 2026 21:52:48 GMT",
+    "fetchedAt": "2026-11-01T22:57:02.345Z",
     "count": 2
   },
   "ODFare_TRTC": {
@@ -85,8 +85,8 @@
     "count": 14884
   },
   "ODFare_NTMC": {
-    "lastModified": "Wed, 28 Oct 2026 02:52:49 GMT",
-    "fetchedAt": "2026-10-28T09:01:40.072Z",
+    "lastModified": "Sun, 01 Nov 2026 17:52:50 GMT",
+    "fetchedAt": "2026-11-01T22:57:03.627Z",
     "count": 196
   }
 }
