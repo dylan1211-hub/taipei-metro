@@ -726,6 +726,22 @@ header p{margin:0;color:color-mix(in srgb,var(--band-ink) 72%,transparent);font-
 .fl .hm{font-family:var(--f-num);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.3}
 .fl .s{font-size:13px;color:var(--muted)}
 .fl .alert{grid-column:1/-1;background:transparent;border:1px solid var(--warn);color:var(--warn);font-size:14px;font-weight:700;padding:8px 12px}
+/* 常用路線 */
+.favs h3{margin:0 0 8px;font-size:15px}
+.fav{display:flex;gap:6px;align-items:stretch;margin-top:6px}
+.fav .favgo{flex:1;min-width:0;text-align:left;font:inherit;background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;cursor:pointer}
+.fav .favgo:hover{border-color:var(--accent)}
+.fav .favgo b{display:block;font-size:15px}
+.fav .favgo .s{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fav .favgo .w{display:block;font-size:12px;font-weight:700;color:var(--warn)}
+.fav .ic{font:inherit;width:40px;flex:none;background:transparent;color:var(--muted);border:1px solid var(--rule);border-radius:8px;cursor:pointer}
+.fav .ic:hover{color:var(--ink)}
+.favs .fh{font-size:12px;color:var(--muted);margin:6px 0 0}
+.detail .dh{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.favbtn{font:inherit;font-size:13px;white-space:nowrap;padding:4px 10px;border-radius:8px;border:1px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer;flex:none}
+.favbtn[aria-pressed="true"]{color:var(--warn);border-color:var(--warn)}
+.tp{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
+.tp input{width:16px;height:16px;accent-color:var(--accent)}
 .fl .fn{grid-column:1/-1;background:transparent;padding:0;font-size:12px;color:var(--muted)}
 .pp .fls{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.6;font-variant-numeric:tabular-nums}
 .pp .fls b{color:var(--ink);font-family:var(--f-num);font-weight:600}
@@ -738,6 +754,8 @@ header p{margin:0;color:color-mix(in srgb,var(--band-ink) 72%,transparent);font-
 .card .big{font-family:var(--f-num);font-size:24px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
 .card .big small{font-family:var(--f-body);font-size:13px;font-weight:500;color:var(--muted);margin-left:2px}
 .card .meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.card .meta.mine,.sum .mine{color:var(--accent);font-weight:700}
+.log .lroute{font-size:12px;color:var(--muted);margin:-4px 0 4px}
 .chips{display:flex;flex-wrap:wrap;gap:4px}
 .chip{display:inline-block;font-size:12px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap}
 .same{font-size:12px;color:var(--muted)}
@@ -853,6 +871,7 @@ footer.note ul{margin:0;padding-left:18px}
   </div>
 
   <div class="side">
+    <section class="panel favs" id="favs" hidden></section>
     <section class="panel" aria-label="查詢">
       <form id="qf" autocomplete="off">
         <div class="q">
@@ -867,6 +886,7 @@ footer.note ul{margin:0;padding-left:18px}
             <button type="button" data-p="off">離峰</button>
             <button type="button" data-p="night">深夜</button>
           </div>
+          <label class="tp"><input type="checkbox" id="tpass"> <span id="tpassLbl"></span></label>
           <div class="acts2"><button type="button" class="ghost2" id="clear">清除</button><button class="go" type="submit">查詢路線</button></div>
         </div>
         <div class="err" id="err" hidden></div>
@@ -999,7 +1019,43 @@ const I18N={"zh-Hant":{
   fareApprox:"約 ",
   fareNote:"成人單程票 {adult} 元・優待票 {conc} 元（兒童、敬老、愛心等，資格依各市規定）・資料來源：TDX",
   fareMixed:"這條路線途經環狀線，以台北捷運票價表估算，跨系統實際扣款可能不同，請以官方公告為準。",
-  fareNone:"跨台北捷運與環狀線的票價 TDX 沒有提供，暫時無法試算。"
+  fareNone:"跨台北捷運與環狀線的票價 TDX 沒有提供，暫時無法試算。",
+  logTitle:"實測紀錄：{from} → {to}",
+  logRoute:"記錄的是目前選的「{mode}」路線（{lines}）",
+  logEmpty:"還沒有紀錄。實際搭一次後輸入花了幾分鐘，累積 3 次就能用你的紀錄校正預估。",
+  logNeedMore:"這條路線已記錄 <b>{n}</b> 次，再 <b>{k}</b> 次就能用你的紀錄校正預估。",
+  logCalib:"依你的 <b>{n}</b> 次紀錄（{scope}），這條路線約 <b>{med}</b> 分（{lo}–{hi} 分）；系統預估平均 {est} 分。",
+  logScopePeriod:"{p}時段",
+  logScopeAll:"不分時段",
+  logOther:"另有 {n} 次是其他走法的紀錄。",
+  logMinPh:"分鐘",
+  logMinAria:"實際花費分鐘",
+  logSave:"記錄",
+  logStart:"出發，開始計時",
+  logStop:"到站，停止計時",
+  logClear:"清除紀錄",
+  logClearConfirm:"再按一次確認清除",
+  logNoStore:"這個瀏覽器不允許儲存，紀錄沒有存下來。",
+  logBadMin:"請輸入大於 0 的分鐘數。",
+  logTiming:"計時中，抵達出口時按「到站」。",
+  logSaved:"已記錄 {m} 分鐘。",
+  mineCard:"依你的紀錄約 {m} 分",
+  mineSum:"你的紀錄",
+  favTitle:"常用路線",
+  favAdd:"☆ 加入常用",
+  favSaved:"★ 已加入常用",
+  favFull:"常用路線最多 {n} 條，請先移除一條。",
+  favRow:"{lo}–{hi} 分・{fare}最晚 {last} 進站",
+  favFare:"{n} 元・",
+  favRev:"查回程",
+  favDel:"移除",
+  favSoon:"⚠ 末班車：再 {n} 分鐘內要進站",
+  favMissed:"今晚已銜接不上末班車",
+  favHint:"點路線直接查詢，⇄ 查回程。時間依目前時段（{p}）估算。",
+  tpass:"我有 TPASS 月票",
+  fareTpassCard:"TPASS 不另付費",
+  fareTpassNote:"已勾選 TPASS 月票，搭捷運不另扣款{orig}。TPASS 適用範圍以官方公告為準。",
+  fareTpassOrig:"（單程原價 {n} 元）"
 }};
 let LANG="zh-Hant";
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]);
@@ -1336,7 +1392,7 @@ function run(fit){
   if(f===t){err.textContent="起站和迄站相同，請換一個迄站。";err.hidden=false;routes=[];renderAll(fit);return;}
   routes=MODES.map(m=>({mode:m,r:search(f,t,m.id,period)})); sel=0; renderAll(fit);
 }
-function renderAll(fit){renderCards();renderDetail();renderLog();drawRoute(routes[sel]&&routes[sel].r,fit);}
+function renderAll(fit){renderCards();renderDetail();renderLog();renderFavs();drawRoute(routes[sel]&&routes[sel].r,fit);}
 
 function renderCards(){
   const box=$("cards"); box.innerHTML="";
@@ -1349,10 +1405,11 @@ function renderCards(){
       <span class="big">${r.low}–${r.high}<small>分</small></span>
       <div class="bar" aria-hidden="true"><span style="width:${r.walk/tot*100}%;background:${C_WALK}"></span><span style="width:${r.wait/tot*100}%;background:${C_WAIT}"></span><span style="width:${r.ride/tot*100}%;background:var(--accent)"></span></div>
       <span class="meta">轉乘 ${r.xfers} 次・走路 ${fmt(r.walk)} 分</span>
-      ${(fa=>fa&&!fa.none?`<span class="meta">${t(fa.est?"fareCardEst":"fareCard",{n:fa.adult})}</span>`:"")(fareFor(r))}
+      ${fareCardHtml(fareFor(r))}
+      ${(c=>c?`<span class="meta mine">${t("mineCard",{m:c.med})}</span>`:"")(calib(r))}
       <span class="chips">${lines.map(chip).join("")}</span>
       ${dup?`<span class="same">與「${dup.mode.name}」相同</span>`:""}`;
-    b.addEventListener("click",()=>{sel=i;renderCards();renderDetail();drawRoute(routes[sel].r,true);});
+    b.addEventListener("click",()=>{sel=i;renderCards();renderDetail();renderLog();drawRoute(routes[sel].r,true);});
     box.appendChild(b);
   });
   if(routes.length){const lg=document.createElement("div");lg.className="legend";
@@ -1381,10 +1438,12 @@ function renderDetail(){
   add(`<strong>${r.to}</strong><div class="sub">${r.exTo?t("leaveVia",{exit:exitLabel(r.exTo),min:fmt(r.exitWalk)})+(r.exTo.desc?`<br>${esc(r.exTo.desc)}`:""):`下車走到出口・約 ${fmt(r.exitWalk)} 分`}</div><div class="hint">🚃 搭第 ${eh.car} 節最靠近出站電扶梯 <span class="tag">示意</span></div>`,r.exitWalk,"dash","var(--muted)");
   items.push(`<li><span class="t">${fmt(tm)}′</span><span class="rail end" style="--c:var(--ink)"><span class="dot"></span></span><div class="body"><strong>${r.exTo?t("arriveAt",{exit:r.exTo.name}):"抵達出口"}</strong>${r.exFrom||r.exTo?`<div class="sub">${t("exitEst")}</div>`:""}</div></li>`);
   const pn={peak:"尖峰",off:"離峰",night:"深夜"}[period];
-  el.innerHTML=`<h2>${x.mode.name}：${r.from} → ${r.to}</h2>
-    <div class="sum"><span>預估 <b>${r.low}–${r.high}</b> 分（平均 ${fmt(r.avg)}）</span><span>搭車 <b>${fmt(r.ride)}</b></span><span>等車 <b>${fmt(r.wait)}</b></span><span>走路 <b>${fmt(r.walk)}</b></span>${fa&&!fa.none?`<span>${t("fareSum")} ${fa.est?t("fareApprox"):""}<b>${fa.adult}</b> ${t("fareUnit")}</span>`:""}<span>${pn}時段</span></div>
-    ${fa?`<div class="fare">${fa.none?t("fareNone"):t("fareNote",{adult:fa.adult,conc:fa.conc})+(fa.est?`<br>${t("fareMixed")}`:"")}</div>`:""}
+  const fav=favIndex(r.from,r.to)>=0;
+  el.innerHTML=`<div class="dh"><h2>${x.mode.name}：${r.from} → ${r.to}</h2><button type="button" class="favbtn" id="favadd" aria-pressed="${fav}">${t(fav?"favSaved":"favAdd")}</button></div>
+    <div class="sum"><span>預估 <b>${r.low}–${r.high}</b> 分（平均 ${fmt(r.avg)}）</span>${(c=>c?`<span class="mine">${t("mineSum")} <b>${c.med}</b> 分</span>`:"")(calib(r))}<span>搭車 <b>${fmt(r.ride)}</b></span><span>等車 <b>${fmt(r.wait)}</b></span><span>走路 <b>${fmt(r.walk)}</b></span>${fareSumHtml(fa)}<span>${pn}時段</span></div>
+    ${fareNoteHtml(fa)}
     <ol class="tl">${items.join("")}</ol>${flHtml(r)}`;
+  $("favadd").addEventListener("click",()=>toggleFav(r));
 }
 function flHtml(r){
   const f=firstLast(r), now=nowTaipeiMin();
@@ -1402,27 +1461,115 @@ function flHtml(r){
 function logKey(){return "trip:"+$("from").value.trim()+">"+$("to").value.trim();}
 function readLog(){try{return JSON.parse(localStorage.getItem(logKey())||"[]");}catch(e){return [];}}
 function writeLog(a){try{localStorage.setItem(logKey(),JSON.stringify(a));return true;}catch(e){return false;}}
+// 每筆紀錄：{m 分鐘, p 時段, sig 路線簽名, ex [起出口, 迄出口], ts 時間}。舊版只存數字，視為「最快路線、時段不明」
+function logRecs(){return readLog().map(v=>typeof v==="number"?{m:v}:v).filter(x=>x&&x.m>0);}
+function addRec(m,r){const arr=readLog();arr.push({m,p:period,sig:r.sig,ex:[r.exFrom?.id??null,r.exTo?.id??null],ts:Date.now()});return writeLog(arr);}
+// 實測校正：同一條路線累積 3 筆以上才採用；同時段有 3 筆就只用同時段，否則用全部時段。取中位數，不受單次誤點影響
+const CALIB_MIN=3;
+function recsFor(r){const fastSig=routes[0]&&routes[0].r&&routes[0].r.sig;return logRecs().filter(x=>x.sig?x.sig===r.sig:r.sig===fastSig);}
+function calib(r){
+  const a=recsFor(r); if(a.length<CALIB_MIN) return null;
+  const same=a.filter(x=>x.p===period), use=same.length>=CALIB_MIN?same:a, ms=use.map(x=>x.m).sort((p,q)=>p-q);
+  const mid=ms.length%2?ms[(ms.length-1)/2]:(ms[ms.length/2-1]+ms[ms.length/2])/2;
+  return {n:use.length,med:Math.round(mid),lo:ms[0],hi:ms[ms.length-1],samePeriod:use===same};
+}
 let timerStart=null;
 function renderLog(){
-  const el=$("log"),r=routes[0]&&routes[0].r; el.hidden=!r;
+  const el=$("log"),x=routes[sel],r=x&&x.r; el.hidden=!r;
   if(!r){el.innerHTML="";return;}
-  const a=readLog(), avg=a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
-  let summary="還沒有紀錄。實際搭一次後輸入花了幾分鐘，之後就能用你的數據校正預估。";
-  if(avg!=null){const d=avg-r.avg;summary=`你記錄了 <b>${a.length}</b> 次，平均 <b>${avg.toFixed(1)}</b> 分，比最快路線的預估${d>=0?"慢":"快"} <b>${Math.abs(d).toFixed(1)}</b> 分。`;}
-  el.innerHTML=`<h3>實測紀錄：${r.from} → ${r.to}</h3><p>${summary}</p>
-    <form id="lf"><input id="mins" type="number" min="1" max="240" step="1" placeholder="分鐘" aria-label="實際花費分鐘">
-      <button class="go" type="submit">記錄</button>
-      <button class="ghost" type="button" id="tmr">${timerStart?"到站，停止計時":"出發，開始計時"}</button>
-      ${a.length?'<button class="ghost" type="button" id="clr">清除紀錄</button>':""}</form><p id="lmsg" hidden></p>`;
-  const msg=t=>{const m=$("lmsg");m.textContent=t;m.hidden=false;};
-  $("lf").addEventListener("submit",e=>{e.preventDefault();const v=+$("mins").value;if(!(v>0)){msg("請輸入大於 0 的分鐘數。");return;}const arr=readLog();arr.push(v);if(!writeLog(arr)){msg("這個瀏覽器不允許儲存，紀錄沒有存下來。");return;}renderLog();});
+  const all=logRecs(), mine=recsFor(r), c=calib(r);
+  const pn={peak:"尖峰",off:"離峰",night:"深夜"}[period];
+  let summary;
+  if(c) summary=t("logCalib",{n:c.n,scope:c.samePeriod?t("logScopePeriod",{p:pn}):t("logScopeAll"),med:c.med,lo:c.lo,hi:c.hi,est:fmt(r.avg)});
+  else if(mine.length) summary=t("logNeedMore",{n:mine.length,k:CALIB_MIN-mine.length});
+  else summary=t("logEmpty");
+  if(all.length>mine.length) summary+=`<br>${t("logOther",{n:all.length-mine.length})}`;
+  el.innerHTML=`<h3>${t("logTitle",{from:esc(r.from),to:esc(r.to)})}</h3><p class="lroute">${t("logRoute",{mode:x.mode.name,lines:[...new Set(r.legs.map(l=>LINE_INFO[l.svc.line].name))].join("→")})}</p><p>${summary}</p>
+    <form id="lf"><input id="mins" type="number" min="1" max="240" step="1" placeholder="${t("logMinPh")}" aria-label="${t("logMinAria")}">
+      <button class="go" type="submit">${t("logSave")}</button>
+      <button class="ghost" type="button" id="tmr">${timerStart?t("logStop"):t("logStart")}</button>
+      ${all.length?`<button class="ghost" type="button" id="clr">${t("logClear")}</button>`:""}</form><p id="lmsg" hidden></p>`;
+  const msg=s=>{const m=$("lmsg");m.textContent=s;m.hidden=false;};
+  const save=m=>{if(!addRec(m,r)){msg(t("logNoStore"));return false;}renderAll(false);return true;};
+  $("lf").addEventListener("submit",e=>{e.preventDefault();const v=+$("mins").value;if(!(v>0)){msg(t("logBadMin"));return;}save(v);});
   $("tmr").addEventListener("click",()=>{
-    if(!timerStart){timerStart=Date.now();renderLog();msg("計時中，抵達出口時按「到站」。");}
-    else{const m=Math.max(1,Math.round((Date.now()-timerStart)/60000));timerStart=null;const arr=readLog();arr.push(m);writeLog(arr);renderLog();msg(`已記錄 ${m} 分鐘。`);}
+    if(!timerStart){timerStart=Date.now();renderLog();msg(t("logTiming"));}
+    else{const m=Math.max(1,Math.round((Date.now()-timerStart)/60000));timerStart=null;if(save(m))msg(t("logSaved",{m}));}
   });
-  const c=$("clr"); if(c) c.addEventListener("click",()=>{if(c.dataset.ok){writeLog([]);renderLog();}else{c.dataset.ok="1";c.textContent="再按一次確認清除";}});
+  const cb=$("clr"); if(cb) cb.addEventListener("click",()=>{if(cb.dataset.ok){writeLog([]);renderAll(false);}else{cb.dataset.ok="1";cb.textContent=t("logClearConfirm");}});
 }
+// ---------- TPASS 月票（本機設定） ----------
+function tpassOn(){try{return localStorage.getItem("tpass")==="1";}catch(e){return false;}}
+$("tpassLbl").textContent=t("tpass");
+$("tpass").checked=tpassOn();
+$("tpass").addEventListener("change",e=>{try{localStorage.setItem("tpass",e.target.checked?"1":"0");}catch(err){}renderAll(false);});
+const fareAmt=fa=>(fa.est?t("fareApprox"):"")+fa.adult;
+function fareCardHtml(fa){
+  if(tpassOn()) return `<span class="meta">${t("fareTpassCard")}</span>`;
+  return fa&&!fa.none?`<span class="meta">${t(fa.est?"fareCardEst":"fareCard",{n:fa.adult})}</span>`:"";
+}
+function fareSumHtml(fa){
+  if(tpassOn()) return `<span>${t("fareSum")} <b>0</b> ${t("fareUnit")}</span>`;
+  return fa&&!fa.none?`<span>${t("fareSum")} ${fa.est?t("fareApprox"):""}<b>${fa.adult}</b> ${t("fareUnit")}</span>`:"";
+}
+function fareNoteHtml(fa){
+  if(tpassOn()) return `<div class="fare">${t("fareTpassNote",{orig:fa&&!fa.none?t("fareTpassOrig",{n:fareAmt(fa)}):""})}</div>`;
+  if(!fa) return "";
+  return `<div class="fare">${fa.none?t("fareNone"):t("fareNote",{adult:fa.adult,conc:fa.conc})+(fa.est?`<br>${t("fareMixed")}`:"")}</div>`;
+}
+
+// ---------- 常用路線（本機，最多 FAV_MAX 條） ----------
+// 每條：{from, to, fx 起站出口, tx 迄站出口}；回程直接把起訖與出口對調
+const FAV_MAX=5;
+function readFavs(){try{const a=JSON.parse(localStorage.getItem("favs")||"[]");return Array.isArray(a)?a.filter(f=>f&&byStation[f.from]&&byStation[f.to]):[];}catch(e){return [];}}
+function writeFavs(a){try{localStorage.setItem("favs",JSON.stringify(a));return true;}catch(e){return false;}}
+function favIndex(from,to){return readFavs().findIndex(x=>x.from===from&&x.to===to);}
+function favEnds(fv,rev){return rev?{from:fv.to,to:fv.from,fx:fv.tx,tx:fv.fx}:{from:fv.from,to:fv.to,fx:fv.fx,tx:fv.tx};}
+function toggleFav(r){
+  const a=readFavs(),i=a.findIndex(x=>x.from===r.from&&x.to===r.to);
+  if(i>=0) a.splice(i,1);
+  else{
+    if(a.length>=FAV_MAX){const m=$("info");m.textContent=t("favFull",{n:FAV_MAX});m.hidden=false;return;}
+    a.push({from:r.from,to:r.to,fx:r.exFrom?.id??"",tx:r.exTo?.id??""});
+  }
+  if(!writeFavs(a)){const m=$("info");m.textContent=t("logNoStore");m.hidden=false;return;}
+  renderDetail();renderFavs();
+}
+// 用常用路線自己的出口算最快走法（暫時替換 EXSEL，算完還原，不影響目前查詢）
+function favRoute(e){
+  const pick=(n,id)=>exitsOf(n).find(x=>x.id===id)||null, keep={from:EXSEL.from,to:EXSEL.to};
+  EXSEL.from=pick(e.from,e.fx); EXSEL.to=pick(e.to,e.tx);
+  try{return search(e.from,e.to,"fast",period);}finally{EXSEL.from=keep.from;EXSEL.to=keep.to;}
+}
+function renderFavs(){
+  const el=$("favs"),a=readFavs(); el.hidden=!a.length;
+  if(!a.length){el.innerHTML="";return;}
+  const now=nowTaipeiMin(), pn={peak:"尖峰",off:"離峰",night:"深夜"}[period];
+  const rows=a.map((fv,i)=>{
+    const r=favRoute(favEnds(fv,false)); if(!r) return "";
+    const f=firstLast(r), fa=fareFor(r), left=f.lastEnter-now;
+    const fare=tpassOn()?"":fa&&!fa.none?t("favFare",{n:fareAmt(fa)}):"";
+    const warn=left>=0&&left<=120?t("favSoon",{n:Math.floor(left)}):(now>f.lastEnter&&now<1440+FIRST?t("favMissed"):"");
+    const nm=(n,id)=>{const x=id&&exitsOf(n).find(e=>e.id===id);return esc(n)+(x?` <small>${esc(x.name)}</small>`:"");};
+    return `<div class="fav"><button type="button" class="favgo" data-go="${i}"><b>${nm(fv.from,fv.fx)} → ${nm(fv.to,fv.tx)}</b>
+      <span class="s">${t("favRow",{lo:r.low,hi:r.high,fare,last:hmPlain(f.lastEnter)})}</span>${warn?`<span class="w">${warn}</span>`:""}</button>
+      <button type="button" class="ic" data-rev="${i}" title="${t("favRev")}" aria-label="${t("favRev")}">⇄</button>
+      <button type="button" class="ic" data-del="${i}" title="${t("favDel")}" aria-label="${t("favDel")}">×</button></div>`;
+  }).join("");
+  el.innerHTML=`<h3>${t("favTitle")}</h3>${rows}<p class="fh">${t("favHint",{p:pn})}</p>`;
+}
+$("favs").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const a=readFavs();
+  if(b.dataset.del!=null){a.splice(+b.dataset.del,1);writeFavs(a);renderFavs();if(routes[sel])renderDetail();return;}
+  const i=+(b.dataset.go??b.dataset.rev), fv=a[i]; if(!fv) return;
+  const e2=favEnds(fv,b.dataset.rev!=null);
+  $("from").value=e2.from;$("to").value=e2.to;syncExits();$("fromExit").value=e2.fx||"";$("toExit").value=e2.tx||"";run(true);
+});
+setInterval(renderFavs,60000); // 末班倒數每分鐘更新
+
 run(false);
+renderFavs();
 })();
 </script>
 </body></html>
